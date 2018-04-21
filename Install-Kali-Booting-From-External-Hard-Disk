@@ -1,0 +1,65 @@
+# 问题描述：为什么要把kali安装到移动硬盘或U盘上呢？
+	虚拟机上无法将笔记本内置无线网卡直接识别为虚拟机的无线网卡。即，选择桥接模式的kali虚拟机，ifconfig识别出eth0（而不是类似wlan0的无线网卡名），iwconfig也不能用。
+	为实验无线渗透，采取以下方案之一：
+	（1）外加usb无线网卡，使用kali虚拟机无线渗透；
+	（2）u盘安装kali启动盘，使用宿主机无线渗透。
+
+# 环境描述
+	（1）宿主机：win7（64位）。
+	（2）U盘：32g SanDisk。
+
+# 准备工作
+	（1）在KaliLinux官方网站下载最新的iso镜像文件。
+	（2）移动硬盘或者U盘（空间建议32g或以上）。
+	（3）将移动硬盘或者U盘格式化成FAT格式。
+
+# 虚拟主机的创建和配置
+	（1）新建虚拟主机配置：2G内存/20G硬盘/Linux debian 8/稍后安装操作系统/安装目录设置在宿主机。
+	（2）编辑虚拟机设置：为CDROM选定ISO/移除硬盘
+
+
+# 安装Kali到移动硬盘或者U盘
+	（1）将U盘或者移动硬盘插到PC上，打开我的电脑，确认看到移动设备。
+	（2）在Vmware中运行刚刚创建后的虚拟机。
+	（3）虚拟机运行后，菜单选择：虚拟机——可移动设备——SanDiskCruzerForce（与U盘品牌有关），选择断开连接（连接主机），此后移动设备会挂载到虚拟机下，Windows下将暂时看不到这个设备。
+	（4）安装Kali，确保以下几项配置：
+	（4.1）在磁盘分区选择“使用整个磁盘”，在列出来的磁盘中选U盘。
+	（4.2）在分区方案中，建议选择“将所有文件放在一个分区中”。
+ 	（4.3）系统会自动创建一个分区，选择“分区设定结束并将修改写入磁盘”，而后开始安装系统。此处如果无法写入磁盘，则退出并格式化U盘，重新创建虚拟机。
+ 	（4.4）“网络镜像”选“否”。
+ 	（4.5）“将GRUB启动引导器安装到主引导记录（MBR）上”，选“是”。
+	（5）安装完成后单击“继续”系统会重启。由于Vmware重启后不会自动挂载移动设备，所以无法进入到刚刚安装完毕的系统中。因为系统已经安装到移动设备中，而我们要通过移动设备来启动物理主机，所以单击“关闭客户机”关闭虚拟机，拔下移动硬盘或者U盘，重启PC然后选择USB启动。注意：关闭虚拟机后，U盘由宿主机接管，因为文件系统已经ext4，系统提示无法识别，并询问是否格式化U盘，此处选取消。
+
+# 修改BIOS的启动设备
+  sony vaio ：关机按assist，选择从U盘启动。
+  联想thinkpad：按f2进入bios，选择从U盘启动。
+  其他型号的笔记本如何进入bios，请自行百度。
+  如何选择从U盘启动，请自行百度。请确保BIOS用LEGACY模式，禁用security。
+
+# 启动Kali并修改设备路径
+  	1 Kali启动界面出现如下选项：
+  	 *kali GNU/linux
+   	  Advanced options for kali GNU/Linux.
+  	  默认选择第一个进入后，启动失败，提示“Target filesystem doesn’t have requested /sbin/init.”
+  	  并进入一个(initramfs)的命令行界面。这是因为重启或磁盘热拔插，导致磁盘序号发生变化，而无法启动系统。在该模式下输入命令查看启动设备的编号：
+  	（initramfs）blkid
+  	  找到U盘系统（文件系统类型为ext4），并记录它的设备名字，在本例为/dev/sdb1， 注意不同机器环境的设备名字不一样。
+  	2 重启，再次进入Kali启动界面，根据界面下方提示，按“e”进入编辑模式；
+  	3 在编辑模式：
+  		setparams 'Advanced options for kali GNU/Linux'
+  		...
+  		Linux 		/boot/vmlinuz-4.14.0kali3-amd64 root=/dev/sda1 ro ...
+  		...
+  		中间一行root值改为/dev/sdb1 rw，按F10保存并重启系统。
+  	4 重启进入系统后：
+  	  fdisk -l #可以看到电脑上的存储设备
+  	  grub-install /dev/sdb #把grub安装到u盘，注意sdb后没有数字
+  	  update-grub #更新grub.cfg
+  	  cat /boot/mnt/grub.cfg    #这一步如果失败,可以cd切入到/boot/grub/目录下,使用cat grub.cfg查看内容,看看linux是否挂载在sdb1下（注意，每个人不一样）。（可以用blkid命令查看一下sdb1的uuid。）
+	  sync   #确保写入
+	  reboot  #重启系统
+	5 Kali启动界面出现如下选项：
+  	 *kali GNU/linux
+  	  Advanced options for kali GNU/Linux.
+  	  windows10
+ *trouble shooting*
